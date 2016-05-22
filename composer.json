@@ -1,0 +1,13 @@
+{
+    "name": "kayak-docs/generator",
+    "description": "Generates JSON documentation from composer package sources.",
+    "version": "0.0.1-dev",
+    "require": {
+        "composer/composer": "^1.1",
+        "apigen/apigen": "^4.1",
+        "symfony/filesystem": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {"KayakDocs\\Generator\\": "src/"}
+    }
+}

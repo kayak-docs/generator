@@ -1,0 +1,65 @@
+{var $active = 'function'}
+
+<name>{$function->name}</name>
+<h1 n:class="$function->deprecated ? deprecated">Function {$function->shortName}</h1>
+
+{if $function->valid}
+
+    <description n:if="$template->longDescription($function)">
+        {$function|longDescription|noescape}
+    </description>
+
+    <div class="info">
+        {if $function->inNamespace()}<b>Namespace:</b> {$function->namespaceName|namespaceLinks|noescape}<br>{/if}
+        {if $function->inPackage()}<b>Package:</b> {$function->packageName|packageLinks|noescape}<br>{/if}
+        {foreach $template->annotationSort($template->annotationFilter($function->annotations, array('param', 'return', 'throws'))) as $annotation => $values}
+            {foreach $values as $value}
+                <b>{$annotation|annotationBeautify}{if $value}:{/if}</b>
+                {$value|annotation:$annotation:$function|noescape}<br>
+            {/foreach}
+        {/foreach}
+        <b>Located at</b>
+        <a n:tag-if="$config->sourceCode" href="{$function|sourceUrl}" title="Go to source code">
+            {$function->fileName|relativePath}
+        </a><br>
+    </div>
+
+{var $annotations = $function->annotations}
+    <parameters n:if="count($function->parameters)">
+        <parameter n:foreach="$function->parameters as $parameter" id="${$parameter->name}">
+            <name><code>{$parameter->typeHint|typeLinks:$function|noescape}</code></name>
+            <value><code>{block|strip}
+                        <var>{if $parameter->passedByReference}&amp; {/if}${$parameter->name}</var>{if $parameter->defaultValueAvailable} = {$parameter->defaultValueDefinition|highlightPHP:$function|noescape}{elseif $parameter->unlimited},…{/if}
+                    {/block}</code></value>
+            <description>{$parameter->description|description:$function}</description>
+        </parameter>
+    </parameters>
+
+    <returns n:if="isset($annotations['return']) && 'void' !== $annotations['return'][0]">
+        <type><code>
+                {$annotations['return'][0]|typeLinks:$function|noescape}
+            </code></type>
+        <description>
+            {$annotations['return'][0]|description:$function|noescape}
+        </description>
+    </returns>
+
+    <throws n:ifset="$annotations['throws']">
+        <exception n:foreach="$annotations['throws'] as $throws">
+            <name><code>
+                    {$throws|typeLinks:$function|noescape}
+                </code></name>
+            <description>
+                {$throws|description:$function|noescape}
+            </description>
+        </exception>
+    </throws>
+
+{else}
+    <invalid>
+        <declared>{$function->fileName|relativePath}</declared>
+        <errors>
+            <error n:foreach="$function->reasons as $reason">Function was redeclared in {$reason->getSender()->getFileName()|relativePath}.</error>
+        </errors>
+    </invalid>
+{/if}
