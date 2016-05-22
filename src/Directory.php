@@ -33,7 +33,7 @@ class Directory {
     $this->fs->mkdir($this->path, $this->parentPerms($this->path));
   }
 
-  public function clear() {
+  public function purge() {
     $this->fs->remove($this->path);
     $this->ensure();
   }

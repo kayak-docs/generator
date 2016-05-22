@@ -7,48 +7,67 @@ use Nette\Configurator;
 class ApiGenBridge {
 
   /**
-   * @var string[]
+   * @var Configurator
    */
-  protected $scanner = [];
+  private $configurator;
 
   /**
    * @var \Nette\DI\Container
    */
-  protected $container;
+  private $container;
 
-  public function __construct($cacheDir, array $services = []) {
-    $defaultServices = [
-      'configuration' => 'ApiGen\Configuration\Configuration',
-      'scanner' => 'ApiGen\Scanner\Scanner',
-      'parser' => 'ApiGen\Parser\Parser',
-      'parserResult' => 'ApiGen\Parser\ParserResult',
-      'generatorQueue' => 'ApiGen\Generator\GeneratorQueue',
-      'themeResources' => 'ApiGen\Theme\ThemeResources',
-      'fileSystem' => 'ApiGen\FileSystem\FileSystem',
-    ];
-    $this->services = $services + $defaultServices;
+  /**
+   * @var array
+   *   A map of service class shorthands.
+   */
+  private $serviceAliases = [
+    'configuration'  => 'ApiGen\Configuration\Configuration',
+    'generatorQueue' => 'ApiGen\Generator\GeneratorQueue',
+    'parser'         => 'ApiGen\Parser\Parser',
+    'parserResult'   => 'ApiGen\Parser\ParserResult',
+    'scanner'        => 'ApiGen\Scanner\Scanner',
+    'themeResources' => 'ApiGen\Theme\ThemeResources',
+  ];
+
+  /**
+   * ApiGenBridge constructor.
+   * 
+   * @param string $cacheDir
+   *   
+   */
+  public function __construct($cacheDir) {
+    // Find the ApiGen src directory.
     $baseClass = new \ReflectionClass('\ApiGen\ApiGen');
     $rootDir = dirname($baseClass->getFileName()) . '/..';
-    $this->container = $this->initContainer($rootDir, $cacheDir);
-    return;
+    
+    $this->configurator = $this->initConfigurator($rootDir, $cacheDir);
+    $this->container = $this->configurator->createContainer();
   }
-  
-  protected function initContainer($rootDir, $cacheDir) {
+
+  /**
+   * Recreates the DI container.
+   */
+  public function reinit() {
+    $this->container = $this->configurator->createContainer();
+  }
+
+  public function getService($alias) {
+    return $this->container->getByType($this->getServiceType($alias), true);
+  }
+
+  protected function initConfigurator($rootDir, $cacheDir) {
     $configurator = new Configurator;
-    #$configurator->setDebugMode( ! Tracy\Debugger::$productionMode);
     $configurator->setTempDirectory($cacheDir);
-    #$configurator->addConfig($rootDir . '/src/DI/config.neon');
     $configurator->addConfig(__DIR__ . '/ApiGen/DI/config.neon');
-    $configurator->addServices([]);
     $configurator->addParameters(['rootDir' => $rootDir]);
-    return $configurator->createContainer();
+    return $configurator;
   }
   
-  public function getService($name) {
-    if(!isset($this->services[$name])) {
-      throw new \Exception("Unknown service alias \"$name\".");
+  private function getServiceType($alias) {
+    if(!isset($this->serviceAliases[$alias])) {
+      throw new \Exception("Unknown service alias \"$alias\".");
     }
-    return $this->container->getByType($this->services[$name]);
+    return $this->serviceAliases[$alias];
   }
   
 }

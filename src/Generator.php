@@ -4,7 +4,10 @@ namespace KayakDocs\Generator;
 
 use ApiGen\Configuration\ConfigurationOptions as CO;
 use ApiGen\Generator\GeneratorQueue;
+use ApiGen\Parser\Parser;
 use ApiGen\Parser\ParserResult;
+use ApiGen\Scanner\Scanner;
+use ApiGen\Theme\ThemeResources;
 
 class Generator {
 
@@ -64,21 +67,25 @@ class Generator {
   
   protected function processPackage($name, $sourceDir) {
     $config = $this->bridge->getService('configuration');
+    /** @var Scanner $scanner */
     $scanner = $this->bridge->getService('scanner');
-    $parser = $this->bridge->getService('parser');
     /** @var ParserResult $parserResult */
     $parserResult = $this->bridge->getService('parserResult');
+    /** @var Parser $parser */
+    $parser = $this->bridge->getService('parser');
     /** @var GeneratorQueue $queue */
     $queue = $this->bridge->getService('generatorQueue');
+    /** @var ThemeResources $queue */
     $themeResources = $this->bridge->getService('themeResources');
-    $fileSystem = $this->bridge->getService('fileSystem');
+    
+    $targetDir = new Directory($this->targetDir . '/' . $name);
+    $targetDir->purge();
 
     $config->resolveOptions([
       CO::SOURCE => $sourceDir,
-      CO::DESTINATION => Directory::prepare($this->targetDir . '/' . $name),
+      CO::DESTINATION => (string) $targetDir,
       CO::TEMPLATE_THEME => 'default',
     ]);
-    $fileSystem->purgeDir($config->getOption(CO::DESTINATION));
     $themeResources->copyToDestination($config->getOption(CO::DESTINATION));
 
     $files = $scanner->scan(
@@ -87,8 +94,10 @@ class Generator {
       $config->getOption(CO::EXTENSIONS)
     );
     $parser->parse($files);
-    #$results[$name] = ['classes' => (array) $parserResult->getClasses()];
     $queue->run();
+
+    // Destroy all services instances to clear runtime caches.
+    $this->bridge->reinit();
   }
   
 }
