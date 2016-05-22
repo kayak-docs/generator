@@ -4,7 +4,9 @@ namespace KayakDocs\Generator;
 
 use Composer\Composer;
 use Composer\Factory;
+use Composer\Installer;
 use Composer\IO\IOInterface;
+use Composer\IO\NullIO;
 use Composer\Package\CompletePackageInterface;
 use Composer\Repository\RepositoryFactory;
 
@@ -35,14 +37,40 @@ class PackageManager {
   }
   
   public static function create($cacheDir) {
-    $io = new \Composer\IO\NullIO();
+    $io = new NullIO();
     $composer = Factory::create($io);
     return new static($io, $composer, $cacheDir);
   }
 
-  public function addPackage($packageString) {
+  public function addSchema($source) {
+    $composer = Factory::create($this->io);
+
+  }
+
+  public function addPackage($packageString, $requireDepth = null) {
     list($name, $constraint) = explode(':', $packageString, 2) + [null, '*'];
+    
+    $installer = Installer::create($this->io, $this->composer);
+    $installer->setDryRun(true);
+    $installer->setPreferStable(true);
+    
     $package = $this->composer->getRepositoryManager()->findPackage($name, $constraint);
+    if(!$package) {
+      throw new \Exception("Package \"$packageString\" not found.");
+    }
+
+    if(is_null($requireDepth) || $requireDepth > 0) {
+      $recursiveDepth = !is_null($requireDepth) ? $requireDepth - 1 : null;
+      foreach($package->getRequires() as $link) {
+        // Assume anything without "/" is php or an extension.
+        if(!strstr($link->getTarget(), '/')) {
+          continue;
+        }
+        $linkTarget = $link->getTarget() . ':' . $link->getConstraint()->getPrettyString();
+        $this->addPackage($linkTarget, $recursiveDepth);
+      }
+    }
+
     $this->packages[$packageString] = $package;
   }
 
@@ -63,5 +91,5 @@ class PackageManager {
     }
     return $sources;
   }
-  
+
 }
