@@ -23,6 +23,11 @@ class Generator {
   protected $targetDir;
 
   /**
+   * @var string
+   */
+  protected $configFile = __DIR__ . '/../packages.json';
+
+  /**
    * @var PackageManager
    */
   protected $packageManager;
@@ -54,6 +59,7 @@ class Generator {
   }
   
   public function process() {
+    $this->readConfig();
     $sources = $this->packageManager->getPackageSources();
 
     $results = [];
@@ -99,5 +105,16 @@ class Generator {
     // Destroy all services instances to clear runtime caches.
     $this->bridge->reinit();
   }
-  
+
+  private function readConfig() {
+    $file = file_get_contents($this->configFile);
+    $config = json_decode($file);
+    foreach ($config->repositories as $repository) {
+      $this->getPackageManager()->addRepository($repository);
+    }
+    foreach ($config->packages as $name => $version) {
+      $this->getPackageManager()->addPackage($name . ':' . $version);
+    }
+  }
+
 }
