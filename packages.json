@@ -1,0 +1,8 @@
+{
+  "repositories": {
+      "drupal": "https://packagist.drupal-composer.org"
+  },
+  "packages": { 
+    "drupal/relation": "8.1.x-dev"
+  }
+}
